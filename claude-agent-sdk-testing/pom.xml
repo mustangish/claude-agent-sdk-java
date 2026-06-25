@@ -8,11 +8,11 @@
         <groupId>com.anthropic</groupId>
         <artifactId>claude-agent-sdk-java</artifactId>
         <version>0.1.0-SNAPSHOT</version>
-        <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>claude-agent-sdk-examples-quickstart</artifactId>
-    <name>Claude Agent SDK Examples — Quick Start</name>
+    <artifactId>claude-agent-sdk-testing</artifactId>
+    <name>Claude Agent SDK for Java — Testing</name>
+    <description>Conformance harness for third-party SessionStore implementations</description>
 
     <dependencies>
         <dependency>
@@ -20,9 +20,16 @@
             <artifactId>claude-agent-sdk-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

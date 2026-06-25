@@ -1,0 +1,77 @@
+name: Rewrite Check
+
+on:
+  # Run weekly as a heartbeat. Catches drift even when no event fires.
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+  # Run when the Python SDK at ../claude-agent-sdk-python has a new tag.
+  # Implemented as a workflow_run on a sibling repo, OR a manual trigger
+  # that the maintainer runs after `git fetch` shows a new Python tag.
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'Re-check diverged areas since this Python tag (e.g. v0.2.110). Leave blank to re-check all non-checked areas.'
+        required: false
+        default: ''
+  # Re-run on every push to a branch that has REWRITE_CHECK.md or
+  # the rewrite-check skill/agents in its diff.
+  push:
+    branches: [main]
+    paths:
+      - 'REWRITE_CHECK.md'
+      - '.claude/skills/rewrite-check/**'
+      - '.claude/agents/**'
+      - 'scripts/rewrite-check.sh'
+  pull_request:
+    paths:
+      - 'claude-agent-sdk-core/**'
+      - 'REWRITE_CHECK.md'
+      - '.claude/skills/rewrite-check/**'
+
+jobs:
+  check:
+    name: Rewrite check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Checkout Python SDK
+        # Use a fixed ref to keep the loop deterministic. Bump on a
+        # schedule when the Python team publishes a new release.
+        uses: actions/checkout@v4
+        with:
+          repository: anthropics/claude-agent-sdk-python
+          ref: v0.2.110
+          path: ../claude-agent-sdk-python
+
+      - name: Install claude CLI
+        run: |
+          # Pin a known version. Update deliberately, not on a whim.
+          curl -fsSL https://claude.ai/install.sh | bash -s -- 1.0.0
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Run rewrite-check loop
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          READER_MODEL: haiku
+          CHECKER_MODEL: sonnet
+        run: |
+          ARGS=()
+          if [[ -n "${{ inputs.since }}" ]]; then
+            ARGS+=(--since "${{ inputs.since }}")
+          fi
+          ./scripts/rewrite-check.sh "${ARGS[@]}"
+
+      - name: Upload updated state
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rewrite-check-state
+          path: REWRITE_CHECK.md
