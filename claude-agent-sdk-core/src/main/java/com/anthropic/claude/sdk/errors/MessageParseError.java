@@ -3,7 +3,9 @@ package com.anthropic.claude.sdk.errors;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Objects;
 
-/** Raised when unable to parse a {@code Message} from CLI output. */
+/**
+ * 当无法从 CLI 输出解析 {@code Message} 时抛出。
+ */
 public final class MessageParseError extends ClaudeSdkError {
     private final JsonNode data;
 

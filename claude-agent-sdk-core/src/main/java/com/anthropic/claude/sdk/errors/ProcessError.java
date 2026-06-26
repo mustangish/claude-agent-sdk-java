@@ -3,9 +3,9 @@ package com.anthropic.claude.sdk.errors;
 import java.util.Objects;
 
 /**
- * Raised when the CLI process fails.
+ * 当 CLI 进程失败时抛出。
  *
- * <p>Carries the non-zero exit code (when available) and a stderr snippet for diagnostics.
+ * <p>携带非零退出码（如果可用）和 stderr 片段用于诊断。
  */
 public final class ProcessError extends ClaudeSdkError {
     private final Integer exitCode;

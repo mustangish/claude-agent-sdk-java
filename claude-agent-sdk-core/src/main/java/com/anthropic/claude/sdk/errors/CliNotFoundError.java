@@ -1,10 +1,10 @@
 package com.anthropic.claude.sdk.errors;
 
 /**
- * Raised when Claude Code is not found or not installed.
+ * 当找不到或未安装 Claude Code 时抛出。
  *
- * <p>Mirrors Python {@code CLINotFoundError}; includes the {@code cliPath} (when known)
- * in the message to help debugging.
+ * <p>对应 Python 的 {@code CLINotFoundError}；消息中会附带
+ * {@code cliPath}（如果已知）以便调试。
  */
 public class CliNotFoundError extends CliConnectionError {
     private final String cliPath;

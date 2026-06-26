@@ -18,17 +18,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 /**
- * Session listing API — list/get/parse session metadata and messages.
+ * 会话列表 API——列表/获取/解析会话元数据和消息。
  *
- * <p>Mirrors Python SDK's {@code _internal/sessions.py} (1925 LOC). Operates on local-disk
- * JSONL transcripts under {@code ~/.claude/projects/<project_key>/} by default, or on a
- * {@link SessionStore} for the {@code _from_store} variants.
+ * <p>对应 Python SDK 的 {@code _internal/sessions.py}（1925 行）。默认
+ * 操作 {@code ~/.claude/projects/<project_key>/} 下的本地磁盘 JSONL
+ * 转录文件，对于 {@code _from_store} 变体则使用 {@link SessionStore}。
  *
- * <p>Each local session file has two parts:
+ * <p>每个本地会话文件由两部分组成：
  * <ul>
- *   <li><b>Main JSONL</b>: {@code <sessionId>.jsonl} — full transcript entries.</li>
- *   <li><b>Lite file</b>: {@code <sessionId>.jsonl.lite} — cached metadata (title, summary,
- *       git branch, cwd, etc.) for fast listing without parsing the full transcript.</li>
+ *   <li><b>主 JSONL</b>：{@code <sessionId>.jsonl}——完整的转录条目。</li>
+ *   <li><b>Lite 文件</b>：{@code <sessionId>.jsonl.lite}——缓存的元数据
+ *       （标题、摘要、git 分支、cwd 等），用于快速列表而无需解析完整
+ *       转录。</li>
  * </ul>
  */
 public final class SessionListing {
@@ -39,45 +40,80 @@ public final class SessionListing {
 
     // ─── Project layout ──────────────────────────────────────────────────────
 
-    /** Root for all session data: {@code ~/.claude}. */
+    /**
+     * 所有会话数据的根目录：{@code ~/.claude}。
+     *
+     * @return Claude 配置主目录
+     */
     public static Path getClaudeConfigHome() {
         String home = System.getProperty("user.home");
         return Paths.get(home, ".claude");
     }
 
-    /** {@code ~/.claude/projects/<projectKey>}. */
+    /**
+     * 项目目录：{@code ~/.claude/projects/<projectKey>}。
+     *
+     * @param projectKey  项目键
+     * @return 项目目录路径（不保证存在）
+     */
     public static Path getProjectDir(String projectKey) {
         return getClaudeConfigHome().resolve("projects").resolve(projectKey);
     }
 
-    /** {@code <projectDir>/<sessionId>.jsonl}. */
+    /**
+     * 会话转录文件路径：{@code <projectDir>/<sessionId>.jsonl}。
+     *
+     * @param projectKey  项目键
+     * @param sessionId  会话 UUID
+     * @return JSONL 转录文件路径
+     */
     public static Path sessionFilePath(String projectKey, String sessionId) {
         return getProjectDir(projectKey).resolve(sessionId + ".jsonl");
     }
 
-    /** {@code <projectDir>/<sessionId>.jsonl.lite} — cached metadata. */
+    /**
+     * Lite 元数据路径：{@code <projectDir>/<sessionId>.jsonl.lite}——
+     * 用于快速列表的缓存元数据。
+     *
+     * @param projectKey  项目键
+     * @param sessionId  会话 UUID
+     * @return lite 元数据文件路径
+     */
     public static Path liteFilePath(String projectKey, String sessionId) {
         return getProjectDir(projectKey).resolve(sessionId + ".jsonl.lite");
     }
 
-    /** {@code <projectDir>/<sessionId>/subagents/} — subagent transcripts. */
+    /**
+     * 子代理转录目录：{@code <projectDir>/<sessionId>/subagents/}。
+     *
+     * @param projectKey  项目键
+     * @param sessionId  父会话 UUID
+     * @return 子代理目录路径
+     */
     public static Path subagentsDir(String projectKey, String sessionId) {
         return getProjectDir(projectKey).resolve(sessionId).resolve("subagents");
     }
 
     // ─── List ───────────────────────────────────────────────────────────────
 
-    /** List sessions in the project, sorted by mtime descending. */
+    /**
+     * 列出项目中的会话，按 mtime 降序排序。
+     *
+     * @param projectKey  项目键
+     * @return 会话列表（最新优先）
+     */
     public static List<SDKSessionInfo> listSessions(String projectKey) {
         return listSessions(projectKey, null, 0);
     }
 
     /**
      * List sessions with optional limit and offset.
+     * 列出带可选 limit 和 offset 的会话。
      *
-     * @param projectKey project key (usually {@link Sessions#projectKeyForDirectory(String)})
-     * @param limit max number to return (null = all)
-     * @param offset skip first N entries
+     * @param projectKey  项目键（通常通过
+     *                    {@link Sessions#projectKeyForDirectory(String)} 获取）
+     * @param limit  返回的最大数量（{@code null} 表示全部）
+     * @param offset  跳过的条目数
      */
     public static List<SDKSessionInfo> listSessions(String projectKey, Integer limit, int offset) {
         Path dir = getProjectDir(projectKey);
@@ -103,8 +139,12 @@ public final class SessionListing {
     // ─── Get one ────────────────────────────────────────────────────────────
 
     /**
-     * Read a single session's metadata. Reads the lite file if present, otherwise parses the
-     * first few lines of the JSONL to extract title/summary.
+     * 读取单个会话的元数据。如果 lite 文件存在则优先读取，否则解析
+     * JSONL 的前几行以提取标题和摘要。
+     *
+     * @param projectKey  项目键
+     * @param sessionId  会话 UUID
+     * @return 会话信息；如果会话文件不存在则返回 {@code null}
      */
     public static SDKSessionInfo readSessionInfo(String projectKey, String sessionId) {
         Path lite = liteFilePath(projectKey, sessionId);
@@ -177,7 +217,16 @@ public final class SessionListing {
 
     // ─── Messages ───────────────────────────────────────────────────────────
 
-    /** Read all messages from a session's JSONL transcript. */
+    /**
+     * 从会话的 JSONL 转录中读取所有用户/助手消息。
+     *
+     * <p>系统消息和工具内部消息（{@code parent_tool_use_id} 非空的消息）
+     * 会被过滤掉。如果会话文件不存在，返回空列表。
+     *
+     * @param projectKey  项目键
+     * @param sessionId  会话 UUID
+     * @return 按时间排序的对话消息列表
+     */
     public static List<SessionMessage> getSessionMessages(String projectKey, String sessionId) {
         Path file = sessionFilePath(projectKey, sessionId);
         if (!Files.exists(file)) return List.of();
@@ -212,7 +261,13 @@ public final class SessionListing {
 
     // ─── Subagents ──────────────────────────────────────────────────────────
 
-    /** List subagents for a session (by reading subagents/*.jsonl file names). */
+    /**
+     * 列出会话的子代理 ID（从 {@code subagents/*.jsonl} 文件名派生）。
+     *
+     * @param projectKey  项目键
+     * @param sessionId  父会话 UUID
+     * @return 子代理 ID 列表（按字典序排序）
+     */
     public static List<String> listSubagents(String projectKey, String sessionId) {
         Path dir = subagentsDir(projectKey, sessionId);
         if (!Files.isDirectory(dir)) return List.of();
@@ -231,7 +286,14 @@ public final class SessionListing {
         return agents;
     }
 
-    /** Read messages from a subagent's JSONL transcript. */
+    /**
+     * 从子代理的 JSONL 转录中读取用户/助手消息。
+     *
+     * @param projectKey  项目键
+     * @param sessionId  父会话 UUID
+     * @param agentId  子代理 ID
+     * @return 按时间排序的子代理对话消息列表
+     */
     public static List<SessionMessage> getSubagentMessages(
         String projectKey, String sessionId, String agentId
     ) {

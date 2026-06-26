@@ -5,11 +5,11 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.util.Map;
 
 /**
- * A system message with a subtype discriminator and a payload.
+ * 带 subtype 鉴别器和负载的系统消息。
  *
- * <p>Subtype-specific subclasses (HookEventMessage, TaskStartedMessage, etc.) live in the same
- * sealed hierarchy. The base {@link #subtype()} + {@link #data()} fields stay populated so that
- * {@code instanceof SystemMessage} continues to match.
+ * <p>子类型（HookEventMessage、TaskStartedMessage 等）位于同一个密封
+ * 层次结构中。基类的 {@link #subtype()} + {@link #data()} 字段保持填充，
+ * 以便 {@code instanceof SystemMessage} 仍然匹配。
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "subtype", include = JsonTypeInfo.As.EXISTING_PROPERTY, visible = true)
 public sealed interface SystemMessage extends Message

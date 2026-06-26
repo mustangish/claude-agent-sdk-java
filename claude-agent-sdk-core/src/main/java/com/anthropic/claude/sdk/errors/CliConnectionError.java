@@ -1,6 +1,8 @@
 package com.anthropic.claude.sdk.errors;
 
-/** Raised when unable to connect to Claude Code. */
+/**
+ * 当无法连接 Claude Code 时抛出。
+ */
 public class CliConnectionError extends ClaudeSdkError {
     public CliConnectionError() {
         super();

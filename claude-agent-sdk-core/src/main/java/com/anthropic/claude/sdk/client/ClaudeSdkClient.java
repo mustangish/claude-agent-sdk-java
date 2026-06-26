@@ -25,11 +25,11 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Interactive, bidirectional client for Claude Code.
+ * Claude Code 的交互式、双向客户端。
  *
- * <p>Supports multi-turn conversations with the CLI subprocess kept open between messages.
- * Uses {@link InternalQuery} for the control protocol (hooks, can_use_tool, interrupt,
- * set_permission_mode, set_model).
+ * <p>支持多轮对话，CLI 子进程在消息之间保持打开状态。
+ * 使用 {@link InternalQuery} 处理控制协议（hooks、can_use_tool、
+ * interrupt、set_permission_mode、set_model）。
  */
 public final class ClaudeSdkClient implements AutoCloseable {
 
@@ -53,7 +53,10 @@ public final class ClaudeSdkClient implements AutoCloseable {
         this.parser = new MessageParser(mapper);
     }
 
-    /** Open the CLI subprocess and run the initialize handshake. */
+    /**
+     * 打开 CLI 子进程并运行 initialize 握手。
+     * 必须先调用此方法才能发送查询或接收消息。
+     */
     public void connect() {
         if (connected.get()) return;
         if (closed.get()) throw new IllegalStateException("Client is closed");
@@ -223,7 +226,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         if (src.taskBudget() != null) b.taskBudget(src.taskBudget());
     }
 
-    /** Send a prompt. */
+    /**
+     * 向 Claude 发送一个用户提示。
+     *
+     * @param prompt  发送给 Claude 的提示词
+     */
     public void query(String prompt) {
         ensureConnected();
         Map<String, Object> message = new LinkedHashMap<>();
@@ -238,7 +245,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Stream messages from the CLI. */
+    /**
+     * 从 CLI 流式接收消息。
+     *
+     * @return 消息迭代器——持续拉取消息直到 CLI 子进程关闭
+     */
     public Iterator<Message> receiveMessages() {
         ensureConnected();
         Iterator<JsonNode> raw = query.receiveMessages();
@@ -268,7 +279,12 @@ public final class ClaudeSdkClient implements AutoCloseable {
         };
     }
 
-    /** Stream messages until a {@link ResultMessage} is reached, then stop. */
+    /**
+     * 流式接收消息，直到遇到 {@link ResultMessage}（回合结束标记）后停止。
+     *
+     * @return 一个迭代器，会产生回合中的所有消息并在 {@link ResultMessage}
+     *         之后终止
+     */
     public Iterator<Message> receiveResponse() {
         return new Iterator<>() {
             final Iterator<Message> source = receiveMessages();
@@ -303,7 +319,10 @@ public final class ClaudeSdkClient implements AutoCloseable {
         };
     }
 
-    /** Send an interrupt signal to the running turn. */
+    /**
+     * 发送中断信号，停止正在运行的回合。
+     * 当前回合会被中止；后续回合可以从这一点继续。
+     */
     public void interrupt() {
         ensureConnected();
         try {
@@ -313,7 +332,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Change permission mode mid-session. */
+    /**
+     * 在会话中途切换权限模式。
+     *
+     * @param mode  新的权限模式
+     */
     public void setPermissionMode(PermissionMode mode) {
         ensureConnected();
         try {
@@ -323,7 +346,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Switch models mid-session. */
+    /**
+     * 在会话中途切换模型。
+     *
+     * @param model  新的模型 ID（例如 {@code "claude-opus-4-1"}）
+     */
     public void setModel(String model) {
         ensureConnected();
         try {
@@ -333,7 +360,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Rewind files to their state at the given user message. */
+    /**
+     * 将文件回退到指定用户消息时刻的状态。
+     *
+     * @param userMessageId  作为回退点的用户消息 UUID
+     */
     public void rewindFiles(String userMessageId) {
         ensureConnected();
         try {
@@ -343,7 +374,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Reconnect a disconnected MCP server. */
+    /**
+     * 重新连接一个断开的 MCP 服务器。
+     *
+     * @param serverName  要重新连接的 MCP 服务器名称
+     */
     public void reconnectMcpServer(String serverName) {
         ensureConnected();
         try {
@@ -353,7 +388,12 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Enable or disable an MCP server. */
+    /**
+     * 启用或禁用一个 MCP 服务器。
+     *
+     * @param serverName  MCP 服务器名称
+     * @param enabled  {@code true} 启用，{@code false} 禁用
+     */
     public void toggleMcpServer(String serverName, boolean enabled) {
         ensureConnected();
         try {
@@ -363,7 +403,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Stop a running task. */
+    /**
+     * 停止一个正在运行的任务。
+     *
+     * @param taskId  要停止的任务 ID
+     */
     public void stopTask(String taskId) {
         ensureConnected();
         try {
@@ -373,7 +417,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Query MCP server connection status. */
+    /**
+     * 查询 MCP 服务器的连接状态。
+     *
+     * @return 所有 MCP 服务器及其状态
+     */
     public com.anthropic.claude.sdk.types.McpStatusResponse getMcpStatus() {
         ensureConnected();
         try {
@@ -383,7 +431,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Query context window usage breakdown. */
+    /**
+     * 查询上下文窗口使用情况的细分。
+     *
+     * @return 各类上下文使用量的细分
+     */
     public com.anthropic.claude.sdk.types.ContextUsageResponse getContextUsage() {
         ensureConnected();
         try {
@@ -393,7 +445,11 @@ public final class ClaudeSdkClient implements AutoCloseable {
         }
     }
 
-    /** Get server initialization info from the CLI (commands, output styles, capabilities). */
+    /**
+     * 从 CLI 获取服务器初始化信息（命令、输出样式、能力）。
+     *
+     * @return 包含 commands、output styles、capabilities 等字段的 map
+     */
     public java.util.Map<String, Object> getServerInfo() {
         ensureConnected();
         JsonNode result = query.initializationResult();
@@ -401,7 +457,10 @@ public final class ClaudeSdkClient implements AutoCloseable {
         return mapper.convertValue(result, java.util.Map.class);
     }
 
-    /** Disconnect from the CLI. Safe to call multiple times. */
+    /**
+     * 断开与 CLI 的连接。可多次调用（幂等）。
+     * 等同于 {@link #close()}。
+     */
     public void disconnect() {
         if (connected.compareAndSet(true, false)) {
             try {

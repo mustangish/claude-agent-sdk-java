@@ -41,13 +41,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Transport that drives the Claude Code CLI as a subprocess.
+ * 以子进程方式驱动 Claude Code CLI 的传输实现。
  *
- * <p>Spawns {@code claude --output-format stream-json --verbose --input-format stream-json ...}
- * and reads/writes line-delimited JSON over stdin/stdout.
+ * <p>启动 {@code claude --output-format stream-json --verbose
+ * --input-format stream-json ...} 并通过 stdin/stdout 读写按行分隔的
+ * JSON。
  *
- * <p>Mirrors Python SDK's {@code SubprocessCLITransport} (762 LOC). Process lifecycle uses a
- * 5-second graceful close → SIGTERM → 5s → SIGKILL ladder.
+ * <p>对应 Python SDK 的 {@code SubprocessCLITransport}（762 行）。
+ * 进程生命周期使用 5 秒优雅关闭 → SIGTERM → 5 秒 → SIGKILL 的阶梯。
  */
 public final class SubprocessCliTransport implements Transport {
 
@@ -290,7 +291,10 @@ public final class SubprocessCliTransport implements Transport {
 
     // ─── Internals ──────────────────────────────────────────────────────────
 
-    /** Drain stdout lines, parse JSON, push to queue. */
+    /**
+     * 排空 stdout 行，解析 JSON，推入消息队列。
+     * 在一个虚拟线程中运行。
+     */
     private void drainStdout() {
         StringBuilder buf = new StringBuilder();
         try {
@@ -347,7 +351,14 @@ public final class SubprocessCliTransport implements Transport {
         }
     }
 
-    /** Locate the claude binary. */
+    /**
+     * 定位 {@code claude} 二进制文件。优先使用 {@code cliPath} 选项，
+     * 然后查找常见路径（{@code ~/.local/bin/claude}、
+     * {@code /usr/local/bin/claude} 等），最后搜索 {@code PATH}。
+     *
+     * @return {@code claude} 二进制的绝对路径
+     * @throws CliNotFoundError 如果找不到可执行文件
+     */
     private String findCliPath() {
         if (options.cliPath() != null) return options.cliPath().toString();
 
@@ -376,7 +387,15 @@ public final class SubprocessCliTransport implements Transport {
         throw new CliNotFoundError("Claude Code not found. Install with: npm install -g @anthropic-ai/claude-code");
     }
 
-    /** Run `claude -v` and warn if version is below MINIMUM_CLI_VERSION. */
+    /**
+     * 运行 {@code claude -v}，如果版本低于 {@link #MINIMUM_CLI_VERSION}
+     * 则发出警告。
+     *
+     * <p>这是一个非阻塞的检查——版本检查失败不会阻止传输工作，
+     * 只会写入日志警告。
+     *
+     * @param cliPath  {@code claude} 二进制的路径
+     */
     private void checkCliVersion(String cliPath) {
         try {
             Process p = new ProcessBuilder(cliPath, "-v").redirectErrorStream(true).start();

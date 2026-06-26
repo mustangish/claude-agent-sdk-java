@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- * Polymorphic union of hook input payloads, dispatched by {@code hook_event_name}.
+ * 钩子输入负载的多态联合类型，由 {@code hook_event_name} 字段分派。
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "hook_event_name",
              include = JsonTypeInfo.As.EXISTING_PROPERTY, visible = true)

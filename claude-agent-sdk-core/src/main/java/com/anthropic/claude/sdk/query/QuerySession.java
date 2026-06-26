@@ -18,13 +18,14 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * A one-shot query session: spawns a CLI subprocess, sends the prompt, and yields Messages.
+ * 一次性查询会话：启动 CLI 子进程、发送提示词，并产出消息。
  *
- * <p>Returned by {@code ClaudeAgentSdk.query(prompt, options)}. Implements {@link Iterable}
- * (so callers can use enhanced-for) and {@link AutoCloseable} (auto-close on iteration end
- * is the caller's responsibility).
+ * <p>由 {@code ClaudeAgentSdk.query(prompt, options)} 返回。
+ * 实现了 {@link Iterable}（因此调用者可以使用增强 for 循环）和
+ * {@link AutoCloseable}（迭代结束后关闭是调用者的责任，通常通过
+ * try-with-resources）。
  *
- * <p>For stateful, multi-turn conversations, use {@code ClaudeSdkClient} instead.
+ * <p>对于有状态的、多轮的对话，请改用 {@code ClaudeSdkClient}。
  */
 public final class QuerySession implements Iterable<Message>, AutoCloseable {
 
@@ -47,7 +48,10 @@ public final class QuerySession implements Iterable<Message>, AutoCloseable {
         return transport;
     }
 
-    /** Connect to CLI if not already connected and send the initial prompt. */
+    /**
+     * 如果尚未连接则连接 CLI，并发送初始提示词。
+     * 通常由 {@link #iterator()} 隐式调用。
+     */
     public void start() {
         if (closed.get()) throw new IllegalStateException("QuerySession is closed");
         transport.connect();

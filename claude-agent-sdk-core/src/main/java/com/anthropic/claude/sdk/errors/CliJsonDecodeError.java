@@ -1,6 +1,8 @@
 package com.anthropic.claude.sdk.errors;
 
-/** Raised when unable to decode JSON from CLI output. */
+/**
+ * 当无法解码 CLI 输出的 JSON 时抛出。
+ */
 public final class CliJsonDecodeError extends ClaudeSdkError {
     private final String line;
     private final Exception originalError;
